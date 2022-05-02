@@ -15,48 +15,15 @@
 package handlers
 
 import (
-	"bytes"
 	"net/http"
 	"strings"
-	"text/template"
 
 	"agola.io/agola/webbundle"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 )
 
-// TODO(sgotti) now the test web ui directly calls the run api url, but this is
-// temporary and all requests should pass from the gateway
-
-const configTplText = `
-const CONFIG = {
-  API_URL: '{{.ApiURL}}',
-  API_BASE_PATH: '{{.ApiBasePath}}',
-}
-
-window.CONFIG = CONFIG
-`
-
-func NewWebBundleHandlerFunc(gatewayURL string) func(w http.ResponseWriter, r *http.Request) {
-	var buf bytes.Buffer
-	configTpl, err := template.New("config").Parse(configTplText)
-	if err != nil {
-		panic(err)
-	}
-
-	configTplData := struct {
-		ApiURL      string
-		ApiBasePath string
-	}{
-		gatewayURL,
-		"/api/v1alpha",
-	}
-	if err := configTpl.Execute(&buf, configTplData); err != nil {
-		panic(err)
-	}
-
-	config := buf.Bytes()
-
+func NewWebBundleHandlerFunc() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Setup serving of bundled webapp from the root path, registered after api
 		// handlers or it'll match all the requested paths
@@ -66,16 +33,7 @@ func NewWebBundleHandlerFunc(gatewayURL string) func(w http.ResponseWriter, r *h
 			AssetInfo: webbundle.AssetInfo,
 		})
 
-		// config.js is the external webapp config file not provided by the
-		// asset and not needed when served from the api server
-		if r.URL.Path == "/config.js" {
-			w.Header().Add("Content-Type", "application/javascript")
-			_, err := w.Write(config)
-			if err != nil {
-				http.Error(w, "", http.StatusInternalServerError)
-			}
-			return
-		}
+		w.Header().Set("Cache-Control", "no-cache")
 
 		// check if the required file is available in the webapp asset and serve it
 		if _, err := webbundle.Asset(r.URL.Path[1:]); err == nil {

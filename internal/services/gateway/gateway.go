@@ -332,7 +332,7 @@ func (g *Gateway) Run(ctx context.Context) error {
 	reposRouter.Handle("/repos/{rest:.*}", reposHandler).Methods("GET", "POST")
 
 	router.Handle("/webhooks", webhooksHandler).Methods("POST")
-	router.PathPrefix("/").HandlerFunc(handlers.NewWebBundleHandlerFunc(g.c.APIExposedURL))
+	router.PathPrefix("/").HandlerFunc(handlers.NewWebBundleHandlerFunc())
 
 	maxBytesHandler := handlers.NewMaxBytesHandler(router, maxRequestSize)
 
